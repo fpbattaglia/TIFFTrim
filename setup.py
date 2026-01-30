@@ -7,8 +7,8 @@ setup(
     packages=find_packages(),
     python_requires=">=3.9",
     install_requires=[
-        "tifffile>=2023.0.0",
-    ],
+        "tifffile>=2023.0.0", 'tqdm'
+	],
     entry_points={
         "console_scripts": [
             "tifftrim=tifftrim.cli:main",

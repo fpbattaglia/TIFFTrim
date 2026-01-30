@@ -6,6 +6,11 @@ from pathlib import Path
 from typing import Optional, Tuple, Union
 
 import tifffile
+try:
+    from tqdm.auto import tqdm
+except Exception:  # pragma: no cover
+    tqdm = None
+    print("tqdm not found, disabling progress bar")
 
 
 _AUTO_HANDLED_TAG_CODES = {
@@ -31,6 +36,7 @@ def trim_3d_tiff(
     end_frame: Optional[int],
     *,
     quiet_tifffile_warnings: bool = True,
+    show_progress: bool = True,
 ) -> None:
     """
     Trim a 3D TIFF stack [frames, height, width] while preserving per-page tags/metadata.
@@ -117,7 +123,17 @@ def trim_3d_tiff(
             trimmed_data = data[start_frame:end_frame]
 
             with tifffile.TiffWriter(str(output_path), bigtiff=tiff.is_bigtiff) as tw:
-                for idx, (frame, page_info) in enumerate(zip(trimmed_data, original_pages)):
+                iterable = zip(trimmed_data, original_pages)
+                if tqdm is not None:
+                    iterable = tqdm(
+                        iterable,
+                        total=len(original_pages),
+                        desc="Writing frames",
+                        unit="frame",
+                        disable=not show_progress,
+                    )
+
+                for idx, (frame, page_info) in enumerate(iterable):
                     tw.write(
                         frame,
                         description=page_info["description"],
