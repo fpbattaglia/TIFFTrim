@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from .trim import parse_frame_range, trim_3d_tiff
+from .trim import parse_frame_range, split_3d_tiff_into_chunks, trim_3d_tiff
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -21,14 +21,21 @@ def build_parser() -> argparse.ArgumentParser:
         "-o",
         "--output",
         required=True,
-        help="Output TIFF path",
+        help="Output TIFF path (trim mode) OR output directory (split mode).",
     )
-    parser.add_argument(
+
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument(
         "-r",
         "--range",
-        required=True,
         help='Frame range "start:end" (end exclusive). Use "10:" to go to the end.',
     )
+    mode.add_argument(
+        "--chunk-size",
+        type=int,
+        help="Split into consecutive chunks of this many frames. Writes multiple TIFFs to --output directory.",
+    )
+
     parser.add_argument(
         "--no-quiet",
         action="store_true",
@@ -42,13 +49,24 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
+        quiet = (not args.no_quiet)
+
+        if args.chunk_size is not None:
+            split_3d_tiff_into_chunks(
+                args.input,
+                args.output,
+                args.chunk_size,
+                quiet_tifffile_warnings=quiet,
+            )
+            return 0
+
         start, end = parse_frame_range(args.range)
         trim_3d_tiff(
             args.input,
             args.output,
             start,
             end,
-            quiet_tifffile_warnings=(not args.no_quiet),
+            quiet_tifffile_warnings=quiet,
         )
         return 0
     except Exception as exc:

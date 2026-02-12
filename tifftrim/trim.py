@@ -151,6 +151,128 @@ def trim_3d_tiff(
             sys.stderr = orig_err
 
 
+def split_3d_tiff_into_chunks(
+    input_path: Union[str, Path],
+    output_dir: Union[str, Path],
+    chunk_size: int,
+    *,
+    quiet_tifffile_warnings: bool = True,
+    show_progress: bool = True,
+) -> list[Path]:
+    """
+    Split a 3D TIFF stack [frames, y, x] into consecutive chunks of chunk_size frames.
+
+    Output files are written to output_dir and named:
+        <input_stem>_frames_<start>_<end>.tif
+    where end is exclusive.
+    """
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be a positive integer")
+
+    input_path = Path(input_path)
+    output_dir = Path(output_dir)
+
+    if not input_path.exists():
+        raise FileNotFoundError(f"Input file not found: {input_path}")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    orig_err = sys.stderr
+    if quiet_tifffile_warnings:
+        sys.stderr = StringIO()
+
+    written: list[Path] = []
+    try:
+        imagej_metadata = None
+
+        with tifffile.TiffFile(str(input_path)) as tiff:
+            data = tiff.asarray()
+
+            if len(data.shape) != 3:
+                raise ValueError(f"Expected a 3D TIFF [frames, y, x], got shape {data.shape}")
+
+            n_frames = data.shape[0]
+            if n_frames == 0:
+                return []
+
+            ranges = [(start, min(start + chunk_size, n_frames)) for start in range(0, n_frames, chunk_size)]
+
+            range_iter = ranges
+            if tqdm is not None:
+                range_iter = tqdm(
+                    ranges,
+                    total=len(ranges),
+                    desc="Writing chunks",
+                    unit="chunk",
+                    disable=not show_progress,
+                )
+
+            for start, end in range_iter:
+                out_path = output_dir / f"{input_path.stem}_frames_{start}_{end}.tif"
+
+                original_pages = []
+                for page in tiff.pages[start:end]:
+                    extratags = []
+                    for tag in page.tags.values():
+                        if int(tag.code) in _AUTO_HANDLED_TAG_CODES:
+                            continue
+
+                        try:
+                            if isinstance(tag.value, (tuple, list)):
+                                value = list(tag.value)
+                            else:
+                                value = tag.value
+
+                            extratags.append(
+                                (
+                                    int(tag.code),
+                                    tag.dtype,
+                                    tag.count,
+                                    value,
+                                    False,
+                                )
+                            )
+                        except Exception:
+                            continue
+
+                    original_pages.append(
+                        {
+                            "extratags": extratags,
+                            "description": page.description,
+                            "datetime": page.datetime,
+                            "resolution": page.resolution,
+                            "compression": page.compression,
+                            "photometric": page.photometric,
+                            "planarconfig": page.planarconfig,
+                            "software": page.software,
+                        }
+                    )
+
+                chunk_data = data[start:end]
+
+                with tifffile.TiffWriter(str(out_path), bigtiff=tiff.is_bigtiff) as tw:
+                    for idx, (frame, page_info) in enumerate(zip(chunk_data, original_pages)):
+                        tw.write(
+                            frame,
+                            description=page_info["description"],
+                            datetime=page_info["datetime"],
+                            resolution=page_info["resolution"],
+                            compression=page_info["compression"],
+                            photometric=page_info["photometric"],
+                            planarconfig=page_info["planarconfig"],
+                            extratags=page_info["extratags"],
+                            metadata=imagej_metadata if idx == 0 else None,
+                            software=page_info["software"],
+                        )
+
+                written.append(out_path)
+
+        return written
+    finally:
+        if quiet_tifffile_warnings:
+            sys.stderr = orig_err
+
+
 def parse_frame_range(range_text: str) -> Tuple[int, Optional[int]]:
     """
     Parse a frame range in the form:
