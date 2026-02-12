@@ -195,6 +195,8 @@ def split_3d_tiff_into_chunks(
             if n_frames == 0:
                 return []
 
+            pad_width = max(1, len(str(n_frames)))
+
             ranges = [(start, min(start + chunk_size, n_frames)) for start in range(0, n_frames, chunk_size)]
 
             range_iter = ranges
@@ -208,7 +210,9 @@ def split_3d_tiff_into_chunks(
                 )
 
             for start, end in range_iter:
-                out_path = output_dir / f"{input_path.stem}_frames_{start}_{end}.tif"
+                start_s = f"{start:0{pad_width}d}"
+                end_s = f"{end:0{pad_width}d}"
+                out_path = output_dir / f"{input_path.stem}_frames_{start_s}_{end_s}.tif"
 
                 original_pages = []
                 for page in tiff.pages[start:end]:
