@@ -156,6 +156,7 @@ def split_3d_tiff_into_chunks(
     output_dir: Union[str, Path],
     chunk_size: int,
     *,
+    block_size: int = 3,
     quiet_tifffile_warnings: bool = True,
     show_progress: bool = True,
 ) -> list[Path]:
@@ -165,9 +166,16 @@ def split_3d_tiff_into_chunks(
     Output files are written to output_dir and named:
         <input_stem>_frames_<start>_<end>.tif
     where end is exclusive.
+
+    When block_size is provided, each output file will have a number of frames that
+    is a multiple of block_size. The last chunk may be truncated to satisfy this.
     """
     if chunk_size <= 0:
         raise ValueError("chunk_size must be a positive integer")
+    if block_size <= 0:
+        raise ValueError("block_size must be a positive integer")
+    if chunk_size % block_size != 0:
+        raise ValueError(f"chunk_size ({chunk_size}) must be a multiple of block_size ({block_size})")
 
     input_path = Path(input_path)
     output_dir = Path(output_dir)
@@ -210,6 +218,15 @@ def split_3d_tiff_into_chunks(
                 )
 
             for start, end in range_iter:
+                n = end - start
+                n_trunc = (n // block_size) * block_size
+                end = start + n_trunc
+
+                if end <= start:
+                    # If the final remainder is smaller than block_size, truncate it away.
+                    # (Only possible for the last chunk, given the chunk_size multiple check.)
+                    continue
+
                 start_s = f"{start:0{pad_width}d}"
                 end_s = f"{end:0{pad_width}d}"
                 out_path = output_dir / f"{input_path.stem}_frames_{start_s}_{end_s}.tif"

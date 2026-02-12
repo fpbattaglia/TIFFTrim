@@ -37,6 +37,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        "--block-size",
+        type=int,
+        default=3,
+        help="When using --chunk-size, ensure every output file has a frame count that is a multiple of this value "
+             "(default: 3). The last chunk may be truncated to satisfy this.",
+    )
+
+    parser.add_argument(
         "--no-quiet",
         action="store_true",
         help="Do not suppress tifffile warnings on stderr.",
@@ -56,6 +64,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.input,
                 args.output,
                 args.chunk_size,
+                block_size=args.block_size,
                 quiet_tifffile_warnings=quiet,
             )
             return 0
