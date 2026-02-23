@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+import re
 from io import StringIO
 from pathlib import Path
 from typing import Optional, Tuple, Union
@@ -317,3 +318,13 @@ def parse_frame_range(range_text: str) -> Tuple[int, Optional[int]]:
     start = int(start_str)
     end = None if end_str == "" else int(end_str)
     return start, end
+
+def get_offset(page_content: str) -> int:
+    tags = page_content.split('\n')
+    nums = []
+    for tag in tags:
+        if tag.startswith('SI.hChannels.channelOffset'):
+            nums = re.findall(r"[-+]?[0-9]+", tag)
+    if len(nums) == 0:
+        raise ValueError('No offset found in page content')
+    return int(nums[0])
