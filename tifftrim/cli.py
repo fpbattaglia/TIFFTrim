@@ -49,6 +49,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Do not suppress tifffile warnings on stderr.",
     )
+    parser.add_argument(
+        "--add-offset",
+        action="store_true",
+        help="Add offset from the software tag to pixel values.",
+    )
     return parser
 
 
@@ -65,6 +70,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.output,
                 args.chunk_size,
                 block_size=args.block_size,
+                add_offset=args.add_offset,
                 quiet_tifffile_warnings=quiet,
             )
             return 0
@@ -75,6 +81,7 @@ def main(argv: list[str] | None = None) -> int:
             args.output,
             start,
             end,
+            add_offset=args.add_offset,
             quiet_tifffile_warnings=quiet,
         )
         return 0

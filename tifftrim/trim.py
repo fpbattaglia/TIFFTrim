@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import sys
 import re
+import sys
 from io import StringIO
 from pathlib import Path
 from typing import Optional, Tuple, Union
@@ -36,6 +36,7 @@ def trim_3d_tiff(
     start_frame: int,
     end_frame: Optional[int],
     *,
+    add_offset: bool = False,
     quiet_tifffile_warnings: bool = True,
     show_progress: bool = True,
 ) -> None:
@@ -123,6 +124,10 @@ def trim_3d_tiff(
 
             trimmed_data = data[start_frame:end_frame]
 
+            if add_offset:
+                offset = get_offset(tiff.pages[0].software)
+                trimmed_data = trimmed_data.astype("int32") + offset
+
             with tifffile.TiffWriter(str(output_path), bigtiff=tiff.is_bigtiff) as tw:
                 iterable = zip(trimmed_data, original_pages)
                 if tqdm is not None:
@@ -158,6 +163,7 @@ def split_3d_tiff_into_chunks(
     chunk_size: int,
     *,
     block_size: int = 3,
+    add_offset: bool = False,
     quiet_tifffile_warnings: bool = True,
     show_progress: bool = True,
 ) -> list[Path]:
@@ -272,6 +278,10 @@ def split_3d_tiff_into_chunks(
 
                 chunk_data = data[start:end]
 
+                if add_offset:
+                    offset = get_offset(tiff.pages[0].software)
+                    chunk_data = chunk_data.astype("int32") + offset
+
                 with tifffile.TiffWriter(str(out_path), bigtiff=tiff.is_bigtiff) as tw:
                     for idx, (frame, page_info) in enumerate(zip(chunk_data, original_pages)):
                         tw.write(
@@ -319,6 +329,7 @@ def parse_frame_range(range_text: str) -> Tuple[int, Optional[int]]:
     end = None if end_str == "" else int(end_str)
     return start, end
 
+
 def get_offset(page_content: str) -> int:
     tags = page_content.split('\n')
     nums = []
@@ -327,4 +338,5 @@ def get_offset(page_content: str) -> int:
             nums = re.findall(r"[-+]?[0-9]+", tag)
     if len(nums) == 0:
         raise ValueError('No offset found in page content')
+    print("offset is ", nums[0])
     return int(nums[0])
