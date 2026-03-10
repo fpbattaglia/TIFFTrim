@@ -1,1 +1,3 @@
 /.editorconfig
+/build/
+/tifftrim.egg-info/
