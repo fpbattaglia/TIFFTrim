@@ -1,3 +1,5 @@
 /.editorconfig
 /build/
+/dist/
 /tifftrim.egg-info/
+/.venv/

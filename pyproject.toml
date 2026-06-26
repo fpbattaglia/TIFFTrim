@@ -1,0 +1,16 @@
+[project]
+name = "tifftrim"
+version = "0.1.0"
+description = "Trim 3D TIFF stacks while preserving TIFF tags/metadata"
+requires-python = ">=3.9"
+dependencies = [
+    "tifffile>=2023.0.0",
+    "tqdm",
+]
+
+[project.scripts]
+tifftrim = "tifftrim.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
