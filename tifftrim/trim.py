@@ -14,6 +14,7 @@ except Exception:  # pragma: no cover
     print("tqdm not found, disabling progress bar")
 
 
+
 _AUTO_HANDLED_TAG_CODES = {
     256,  # ImageWidth
     257,  # ImageLength
