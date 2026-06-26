@@ -2,14 +2,28 @@
 name = "tifftrim"
 version = "0.1.0"
 description = "Trim 3D TIFF stacks while preserving TIFF tags/metadata"
+authors = [
+    { name="Francesco P. Battaglia", email = "fpbattaglia@gmail.com"}
+]
 requires-python = ">=3.9"
 dependencies = [
     "tifffile>=2023.0.0",
     "tqdm",
 ]
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
 
 [project.scripts]
 tifftrim = "tifftrim.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/fpbattaglia/TIFFTrim"
+Issues = "https://github.com/fpbattaglia/TIFFTrim/issues"
 
 [build-system]
 requires = ["hatchling"]
